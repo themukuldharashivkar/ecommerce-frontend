@@ -1,26 +1,29 @@
 import * as React from "react";
-import { Grid, TextField, Button, Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { createOrder } from "../../../Redux/Customers/Order/Action";
-import userEvent from "@testing-library/user-event";
 import AddressCard from "../adreess/AdreessCard";
-import { useState } from "react";
+
+const Field = ({ label, name, className = "", ...rest }) => (
+  <div className={className}>
+    <label htmlFor={name} className="mb-1.5 block text-sm font-medium text-ink">
+      {label}
+    </label>
+    <input id={name} name={name} required className="field" {...rest} />
+  </div>
+);
 
 export default function AddDeliveryAddressForm({ handleNext }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const jwt = localStorage.getItem("jwt");
   const { auth } = useSelector((store) => store);
-  const [selectedAddress, setSelectedAdress] = useState(null);
-
-  // console.log("auth", auth);
+  const [selectedAddress, setSelectedAddress] = React.useState(null);
+  const addresses = auth.user?.addresses || [];
 
   const handleSubmit = (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    // eslint-disable-next-line no-console
-
     const address = {
       firstName: data.get("firstName"),
       lastName: data.get("lastName"),
@@ -30,133 +33,81 @@ export default function AddDeliveryAddressForm({ handleNext }) {
       zipCode: data.get("zip"),
       mobile: data.get("phoneNumber"),
     };
-
     dispatch(createOrder({ address, jwt, navigate }));
-    // after perfoming all the opration
     handleNext();
   };
 
   const handleCreateOrder = (item) => {
-    dispatch(createOrder({ address:item, jwt, navigate }));
+    dispatch(createOrder({ address: item, jwt, navigate }));
     handleNext();
   };
 
   return (
-    <Grid container spacing={4}>
-      <Grid item xs={12} lg={5}>
-        <Box className="border rounded-md shadow-md h-[30.5rem] overflow-y-scroll ">
-          {auth.user?.addresses.map((item) => (
-            <div
-              onClick={() => setSelectedAdress(item)}
-              className="p-5 py-7 border-b cursor-pointer"
-            >
-              {" "}
-              <AddressCard address={item} />
-              {selectedAddress?.id === item.id && (
-                <Button
-                  sx={{ mt: 2 }}
-                  size="large"
-                  variant="contained"
-                  color="primary"
-                  onClick={()=>handleCreateOrder(item)}
+    <div className={`grid items-start gap-8 ${addresses.length ? "lg:grid-cols-[22rem_1fr] xl:gap-12" : "mx-auto max-w-2xl"}`}>
+      {addresses.length > 0 && (
+        <section aria-labelledby="saved-addresses">
+          <h2 id="saved-addresses" className="mb-4 text-base font-semibold text-ink">
+            Saved addresses
+          </h2>
+          <div className="space-y-3" role="radiogroup" aria-label="Saved addresses">
+            {addresses.map((item) => {
+              const on = selectedAddress?.id === item.id;
+              return (
+                <div
+                  key={item.id}
+                  role="radio"
+                  aria-checked={on}
+                  tabIndex={0}
+                  onClick={() => setSelectedAddress(item)}
+                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setSelectedAddress(item))}
+                  className={`cursor-pointer rounded-2xl border bg-white p-4 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                    on ? "border-ink shadow-soft ring-1 ring-ink" : "border-neutral-200 hover:border-neutral-400"
+                  }`}
                 >
-                  Deliverd Here
-                </Button>
-              )}
-            </div>
-          ))}
-        </Box>
-      </Grid>
-      <Grid item xs={12} lg={7}>
-        <Box className="border rounded-md shadow-md p-5">
-          <form onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  id="firstName"
-                  name="firstName"
-                  label="First Name"
-                  fullWidth
-                  autoComplete="given-name"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  id="lastName"
-                  name="lastName"
-                  label="Last Name"
-                  fullWidth
-                  autoComplete="given-name"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  id="address"
-                  name="address"
-                  label="Address"
-                  fullWidth
-                  autoComplete="shipping address"
-                  multiline
-                  rows={4}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  id="city"
-                  name="city"
-                  label="City"
-                  fullWidth
-                  autoComplete="shipping address-level2"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  id="state"
-                  name="state"
-                  label="State/Province/Region"
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  id="zip"
-                  name="zip"
-                  label="Zip / Postal code"
-                  fullWidth
-                  autoComplete="shipping postal-code"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  label="Phone Number"
-                  fullWidth
-                  autoComplete="tel"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                  sx={{ padding: ".9rem 1.5rem" }}
-                  size="large"
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                >
-                  Deliverd Here
-                </Button>
-              </Grid>
-            </Grid>
-          </form>
-        </Box>
-      </Grid>
-    </Grid>
+                  <AddressCard address={item} />
+                  {on && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCreateOrder(item);
+                      }}
+                      className="btn-primary btn-sm mt-4 w-full"
+                    >
+                      Deliver to this address
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <section aria-labelledby="new-address" className="rounded-3xl border border-neutral-200/80 bg-white p-6 shadow-soft sm:p-8">
+        <h2 id="new-address" className="mb-6 text-base font-semibold text-ink">
+          {addresses.length ? "Add a new address" : "Delivery address"}
+        </h2>
+        <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
+          <Field label="First name" name="firstName" autoComplete="given-name" />
+          <Field label="Last name" name="lastName" autoComplete="family-name" />
+          <div className="sm:col-span-2">
+            <label htmlFor="address" className="mb-1.5 block text-sm font-medium text-ink">
+              Address
+            </label>
+            <textarea id="address" name="address" required rows={3} autoComplete="street-address" className="field" />
+          </div>
+          <Field label="City" name="city" autoComplete="address-level2" />
+          <Field label="State" name="state" autoComplete="address-level1" />
+          <Field label="PIN code" name="zip" autoComplete="postal-code" inputMode="numeric" />
+          <Field label="Phone number" name="phoneNumber" type="tel" autoComplete="tel" />
+          <div className="sm:col-span-2">
+            <button type="submit" className="btn-primary w-full sm:w-auto">
+              Deliver to this address
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }

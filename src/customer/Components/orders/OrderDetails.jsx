@@ -1,115 +1,82 @@
-import { Box, Button, Grid, Typography } from "@mui/material";
-import React from "react";
-import OrderTraker from "./OrderTraker";
-import StarIcon from "@mui/icons-material/Star";
-import { useNavigate, useParams } from "react-router-dom";
-import AddressCard from "../adreess/AdreessCard";
-import { deepPurple } from "@mui/material/colors";
+import React, { useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { useEffect } from "react";
+import { ArrowLeftIcon, StarIcon } from "@heroicons/react/24/outline";
+import OrderTraker from "./OrderTraker";
+import AddressCard from "../adreess/AdreessCard";
+import PriceSummary from "../Cart/PriceSummary";
+import { statusStyle } from "./OrderCard";
 import { getOrderById } from "../../../Redux/Customers/Order/Action";
+import { inr } from "../ui/format";
+
+const stepFor = { PLACED: 1, CONFIRMED: 2, SHIPPED: 3, DELIVERED: 5 };
 
 const OrderDetails = () => {
   const dispatch = useDispatch();
-  const jwt = localStorage.getItem("jwt");
   const { orderId } = useParams();
   const { order } = useSelector((store) => store);
-
-  console.log("order", order.order);
+  const o = order.order;
+  const status = o?.orderStatus || "PENDING";
 
   useEffect(() => {
     dispatch(getOrderById(orderId));
-  }, []);
+  }, [orderId, dispatch]);
 
-  const navigate = useNavigate();
   return (
-    <div className=" px-2 lg:px-36 space-y-7 ">
-      <Grid container className="p-3 shadow-lg">
-        <Grid xs={12}>
-          <p className="font-bold text-lg py-2">Delivery Address</p>
-        </Grid>
-        <Grid item xs={6}>
-          <AddressCard address={order.order?.shippingAddress} />
-        </Grid>
-      </Grid>
-      <Box className="p-5 shadow-lg border rounded-md">
-        <Grid
-          container
-          sx={{ justifyContent: "space-between", alignItems: "center" }}
-        >
-          <Grid item xs={9}>
-            <OrderTraker
-              activeStep={
-                order.order?.orderStatus === "PLACED"
-                  ? 1
-                  : order.order?.orderStatus === "CONFIRMED"
-                  ? 2
-                  : order.order?.orderStatus === "SHIPPED"
-                  ? 3
-                  : 5
-              }
-            />
-          </Grid>
-          <Grid item>
-           {order.order?.orderStatus==="DELIVERED" && <Button sx={{ color: ""}} color="error" variant="text" >
-              RETURN
-            </Button>}
+    <div className="container-x pb-20 pt-8 lg:pt-12">
+      <Link to="/account/order" className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-neutral-600 transition hover:text-ink">
+        <ArrowLeftIcon className="h-4 w-4" /> All orders
+      </Link>
 
-            {order.order?.orderStatus!=="DELIVERED" && <Button sx={{ color: deepPurple[500] }} variant="text">
-              cancel order
-            </Button>}
-          </Grid>
-        </Grid>
-      </Box>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Order #{o?.id ?? orderId}</h1>
+        {o && (
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusStyle[status] || statusStyle.PENDING}`}>
+            {status.toLowerCase()}
+          </span>
+        )}
+      </div>
 
-    
+      <div className="mt-8 rounded-3xl border border-neutral-200/80 bg-white p-6 shadow-soft sm:p-8">
+        <OrderTraker activeStep={stepFor[status] ?? 1} />
+      </div>
 
-      <Grid container className="space-y-5">
-        {order.order?.orderItems.map((item) => (
-          <Grid
-            container
-            item
-            className="shadow-xl rounded-md p-5 border"
-            sx={{ alignItems: "center", justifyContent: "space-between" }}
-          >
-            <Grid item xs={6}>
-              {" "}
-              <div className="flex  items-center ">
-                <img
-                  className="w-[5rem] h-[5rem] object-cover object-top"
-                  src={item?.product.imageUrl}
-                  alt=""
-                />
-                <div className="ml-5 space-y-2">
-                  <p className="">{item.product.title}</p>
-                  <p className="opacity-50 text-xs font-semibold space-x-5">
-                    <span>Color: pink</span> <span>Size: {item.size}</span>
-                  </p>
-                  <p>Seller: {item.product.brand}</p>
-                  <p>₹{item.price} </p>
-                </div>
-              </div>
-            </Grid>
-            <Grid item>
-              {
-                <Box
-                  sx={{ color: deepPurple[500] }}
-                  onClick={() => navigate(`/account/rate/${item.product.id}`)}
-                  className="flex items-center cursor-pointer"
+      <div className="mt-8 grid items-start gap-8 lg:grid-cols-[1fr_24rem] xl:gap-12">
+        <div className="space-y-4">
+          {o?.orderItems.map((item) => (
+            <div key={item.id} className="flex gap-4 rounded-3xl border border-neutral-200/80 bg-white p-4 shadow-soft sm:gap-6 sm:p-5">
+              <Link to={`/product/${item.product.id}`} className="h-28 w-24 shrink-0 overflow-hidden rounded-2xl bg-neutral-100">
+                <img className="h-full w-full object-cover object-top" src={item.product.imageUrl} alt="" />
+              </Link>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">{item.product.brand}</p>
+                <p className="mt-0.5 line-clamp-2 text-sm font-medium text-ink">{item.product.title}</p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Size {item.size}
+                  {item.product.color && <> · <span className="capitalize">{item.product.color}</span></>} · Qty {item.quantity}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-ink">{inr(item.discountedPrice ?? item.price)}</p>
+                <Link
+                  to={`/account/rate/${item.product.id}`}
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline"
                 >
-                  <StarIcon
-                    sx={{ fontSize: "2rem" }}
-                    className="px-2 text-5xl"
-                  />
-                  <span>Rate & Review Product</span>
-                </Box>
-              }
-            </Grid>
-          </Grid>
-        ))}
-      </Grid>
+                  <StarIcon className="h-4 w-4" /> Rate & review
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-neutral-200/80 bg-white p-6 shadow-soft">
+            <h2 className="mb-4 text-base font-semibold text-ink">Delivery address</h2>
+            <AddressCard address={o?.shippingAddress} />
+          </div>
+          <PriceSummary data={o} />
+        </div>
+      </div>
     </div>
   );
 };
-// sx={{width:"10px",height:"10px"}}
+
 export default OrderDetails;

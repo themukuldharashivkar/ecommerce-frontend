@@ -1,52 +1,23 @@
 import React from "react";
-import { Avatar } from "@mui/material";
-import { Rating, Box, Typography, Grid } from "@mui/material";
+import { initials } from "../../ui/format";
 
-const ProductReviewCard = ({item}) => {
-  const [value, setValue] = React.useState(4.5);
+const ProductReviewCard = ({ item }) => {
+  const date = item?.createdAt
+    ? new Date(item.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    : null;
   return (
-    <div className="">
-      <Grid container spacing={2} gap={3}>
-        <Grid item xs={1}>
-          <Box>
-            <Avatar
-              className="text-white"
-              sx={{ width: 56, height: 56, bgcolor: "#9155FD" }}
-              alt={item.user.firstName}
-              src=""
-            >
-              {item.user.firstName[0].toUpperCase()}
-            </Avatar>
-          </Box>
-        </Grid>
-        <Grid item xs={9}>
-          <div className="space-y-2">
-            <div className="">
-              <p className="font-semibold text-lg">{item.user.firstName}</p>
-              <p className="opacity-70">April 5, 2023</p>
-            </div>
-            <div>
-            
-
-              <Rating
-                value={value}
-                onChange={(event, newValue) => {
-                  setValue(newValue);
-                }}
-                name="half-rating"
-                defaultValue={2.5}
-                precision={0.5}
-              />
-             
-            </div>
-            <p>
-              {item.review}
-            </p>
-          </div>
-        </Grid>
-      </Grid>
-      <div className="col-span-1 flex"></div>
-    </div>
+    <article className="flex gap-4 border-b border-neutral-200 py-6 last:border-0">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-50 text-sm font-semibold text-brand-700">
+        {initials(item?.user)}
+      </span>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-sm font-semibold text-ink">{item?.user?.firstName}</p>
+          {date && <p className="text-xs text-neutral-500">{date}</p>}
+        </div>
+        <p className="mt-2 break-words text-sm leading-relaxed text-neutral-700">{item?.review}</p>
+      </div>
+    </article>
   );
 };
 

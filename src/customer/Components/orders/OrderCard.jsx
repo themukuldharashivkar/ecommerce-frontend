@@ -1,72 +1,62 @@
-import { Box, Grid, Typography } from "@mui/material";
-import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import AdjustIcon from "@mui/icons-material/Adjust";
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import StarIcon from "@mui/icons-material/Star";
+import { Link, useNavigate } from "react-router-dom";
+import { StarIcon } from "@heroicons/react/24/outline";
+import { inr } from "../ui/format";
+
+export const statusStyle = {
+  PLACED: "bg-blue-50 text-blue-700",
+  CONFIRMED: "bg-indigo-50 text-indigo-700",
+  SHIPPED: "bg-amber-50 text-amber-700",
+  DELIVERED: "bg-green-50 text-green-700",
+  CANCELLED: "bg-red-50 text-red-700",
+  PENDING: "bg-neutral-100 text-neutral-700",
+};
 
 const OrderCard = ({ item, order }) => {
   const navigate = useNavigate();
-  console.log("items ", item,order,order.orderStatus);
+  const status = order?.orderStatus || "PENDING";
+  const date = order?.orderDate || order?.createdAt;
   return (
-    <Box className="p-5 shadow-lg hover:shadow-2xl border ">
-      <Grid spacing={2} container sx={{ justifyContent: "space-between" }}>
-        <Grid item xs={6}>
-          <div
-            onClick={() => navigate(`/account/order/${order?.id}`)}
-            className="flex cursor-pointer"
-          >
-            <img
-              className="w-[5rem] h-[5rem] object-cover object-top"
-              src={item?.product.imageUrl}
-              alt=""
-            />
-            <div className="ml-5">
-              <p className="mb-2">{item?.product.title}</p>
-              <p className="opacity-50 text-xs font-semibold space-x-5">
-                <span>Size: {item?.size}</span>
-              </p>
-            </div>
+    <div className="rounded-3xl border border-neutral-200/80 bg-white p-4 shadow-soft transition hover:shadow-lift sm:p-5">
+      <div className="flex items-start gap-4 sm:gap-5">
+        <Link to={`/account/order/${order?.id}`} className="h-24 w-20 shrink-0 overflow-hidden rounded-2xl bg-neutral-100 sm:h-28 sm:w-24">
+          <img className="h-full w-full object-cover object-top" src={item?.product.imageUrl} alt="" />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusStyle[status] || statusStyle.PENDING}`}>
+              {status.toLowerCase()}
+            </span>
+            <p className="text-sm font-semibold text-ink">{inr(item?.discountedPrice ?? item?.price)}</p>
           </div>
-        </Grid>
-
-        <Grid item xs={2}>
-          <p>₹{item?.price}</p>
-        </Grid>
-        <Grid item xs={4}>
-          <p className="space-y-2 font-semibold">
-            {order?.orderStatus === "DELIVERED"? (
-             <>
-             <FiberManualRecordIcon
-                  sx={{ width: "15px", height: "15px" }}
-                  className="text-green-600 p-0 mr-2 text-sm"
-                />
-                <span>Delivered On Mar 03</span>
-
-            </>
-            ):  <>
-               
-                <AdjustIcon
-                sx={{ width: "15px", height: "15px" }}
-                className="text-green-600 p-0 mr-2 text-sm"
-              />
-              <span>Expected Delivery On Mar 03</span>
-              </>}
-            
+          <Link to={`/account/order/${order?.id}`} className="mt-2 line-clamp-2 block text-sm font-medium text-ink hover:underline">
+            {item?.product.title}
+          </Link>
+          <p className="mt-1 text-xs text-neutral-500">
+            Size {item?.size}
+            {date && <> · Ordered {new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</>}
           </p>
-          <p className="text-xs">Your Item Has Been Delivered</p>
-          {item.orderStatus === "DELIVERED" && (
-            <div
-              onClick={() => navigate(`/account/rate/{id}`)}
-              className="flex items-center text-blue-600 cursor-pointer"
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+            <button
+              type="button"
+              onClick={() => navigate(`/account/order/${order?.id}`)}
+              className="font-semibold text-ink underline underline-offset-4 hover:text-brand-600"
             >
-              <StarIcon sx={{ fontSize: "2rem" }} className="px-2 text-5xl" />
-              <span>Rate & Review Product</span>
-            </div>
-          )}
-        </Grid>
-      </Grid>
-    </Box>
+              View order
+            </button>
+            {status === "DELIVERED" && (
+              <button
+                type="button"
+                onClick={() => navigate(`/account/rate/${item?.product.id}`)}
+                className="inline-flex items-center gap-1 font-semibold text-brand-600 hover:underline"
+              >
+                <StarIcon className="h-4 w-4" /> Rate & review
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

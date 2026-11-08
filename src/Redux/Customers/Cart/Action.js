@@ -32,11 +32,11 @@ export const addItemToCart = (reqData) => async (dispatch) => {
       reqData.data,
       config,
     );
-console.log("add item to cart ",data)
-    dispatch({
+dispatch({
       type: ADD_ITEM_TO_CART_SUCCESS,
       payload: data,
     });
+    return true;
   } catch (error) {
     dispatch({
       type: ADD_ITEM_TO_CART_FAILURE,
@@ -45,8 +45,10 @@ console.log("add item to cart ",data)
           ? error.response.data.message
           : error.message,
     });
+    return false;
   }
 };
+
 export const getCart = (jwt) => async (dispatch) => {
   try {
     dispatch({ type: GET_CART_REQUEST });

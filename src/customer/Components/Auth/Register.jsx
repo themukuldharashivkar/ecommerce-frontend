@@ -1,122 +1,83 @@
-
-import { Grid, TextField, Button, Box, Snackbar, Alert } from "@mui/material";
+import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { getUser, register } from "../../../Redux/Auth/Action";
-import { Fragment, useEffect, useState } from "react";
+import { register } from "../../../Redux/Auth/Action";
+import AuthMessage from "./AuthMessage";
 
-export default function RegisterUserForm({ handleNext }) {
+export default function RegisterUserForm() {
   const navigate = useNavigate();
-  const dispatch=useDispatch();
-  const [openSnackBar,setOpenSnackBar]=useState(false);
+  const dispatch = useDispatch();
   const { auth } = useSelector((store) => store);
-  const handleClose=()=>setOpenSnackBar(false);
+  const [submitted, setSubmitted] = React.useState(false);
 
-  const jwt=localStorage.getItem("jwt");
-
-useEffect(()=>{
-  if(jwt){
-    dispatch(getUser(jwt))
-  }
-
-},[jwt])
-
-
-  useEffect(() => {
-    if (auth.user || auth.error) setOpenSnackBar(true)
-  }, [auth.user]);
-  
   const handleSubmit = (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    // eslint-disable-next-line no-console
-    const userData={
-      firstName: data.get("firstName"),
-      lastName: data.get("lastName"),
-      email: data.get("email"),
-      password: data.get("password"),
-      
-    }
-    console.log("user data",userData);
-    dispatch(register(userData))
-  
+    setSubmitted(true);
+    dispatch(
+      register({
+        firstName: data.get("firstName"),
+        lastName: data.get("lastName"),
+        email: data.get("email"),
+        password: data.get("password"),
+      })
+    );
   };
 
   return (
-    <div className="">
-      <form onSubmit={handleSubmit}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              required
-              id="firstName"
-              name="firstName"
-              label="First Name"
-              fullWidth
-              autoComplete="given-name"
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              required
-              id="lastName"
-              name="lastName"
-              label="Last Name"
-              fullWidth
-              autoComplete="given-name"
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              required
-              id="email"
-              name="email"
-              label="Email"
-              fullWidth
-              autoComplete="given-name"
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              required
-              id="password"
-              name="password"
-              label="Password"
-              fullWidth
-              autoComplete="given-name"
-              type="password"
-            />
-          </Grid>
+    <div>
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="firstName" className="mb-1.5 block text-sm font-medium text-ink">
+              First name
+            </label>
+            <input id="firstName" name="firstName" required autoComplete="given-name" className="field" />
+          </div>
+          <div>
+            <label htmlFor="lastName" className="mb-1.5 block text-sm font-medium text-ink">
+              Last name
+            </label>
+            <input id="lastName" name="lastName" required autoComplete="family-name" className="field" />
+          </div>
+        </div>
+        <div>
+          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-ink">
+            Email
+          </label>
+          <input id="email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" className="field" />
+        </div>
+        <div>
+          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-ink">
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            minLength={6}
+            autoComplete="new-password"
+            placeholder="At least 6 characters"
+            className="field"
+          />
+        </div>
 
-          <Grid item xs={12}>
-            <Button
-              className="bg-[#9155FD] w-full"
-              type="submit"
-              variant="contained"
-              size="large"
-              sx={{padding:".8rem 0"}}
-            >
-              Register
-            </Button>
-          </Grid>
-        </Grid>
+        {submitted && auth.error && (
+          <AuthMessage>We couldn’t create your account. That email may already be registered — try signing in.</AuthMessage>
+        )}
+
+        <button type="submit" disabled={auth.isLoading} className="btn-primary w-full">
+          {auth.isLoading ? "Please wait…" : "Create account"}
+        </button>
       </form>
 
-<div className="flex justify-center flex-col items-center">
-     <div className="py-3 flex items-center ">
-        <p className="m-0 p-0">if you have already account ?</p>
-        <Button onClick={()=> navigate("/login")} className="ml-5" size="small">
-          Login
-        </Button>
-      </div>
-</div>
-
-<Snackbar open={openSnackBar} autoHideDuration={6000} onClose={handleClose}>
-        <Alert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
-          {auth.error?auth.error:auth.user?"Register Success":""}
-        </Alert>
-      </Snackbar>
-     
+      <p className="mt-6 text-center text-sm text-neutral-600">
+        Already have an account?{" "}
+        <button type="button" onClick={() => navigate("/login")} className="font-semibold text-ink underline underline-offset-4 hover:text-brand-600">
+          Sign in
+        </button>
+      </p>
     </div>
   );
 }

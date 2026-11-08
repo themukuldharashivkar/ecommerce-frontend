@@ -1,147 +1,123 @@
-import {
-  Button,
-  Divider,
-  Grid,
-  Rating,
-  TextField,
-  Typography,
-  useMediaQuery,
-} from "@mui/material";
 import React, { useEffect, useState } from "react";
-import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import { useDispatch, useSelector } from "react-redux";
-import { createReview } from "../../../Redux/Customers/Review/Action";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { StarIcon } from "@heroicons/react/24/solid";
+import { StarIcon as StarOutline } from "@heroicons/react/24/outline";
+import { createRating, createReview } from "../../../Redux/Customers/Review/Action";
 import { findProductById } from "../../../Redux/Customers/Product/Action";
-import CustomerRoutes from "../../../Routers/CustomerRoutes";
+import { inr } from "../ui/format";
+
+const labels = ["Poor", "Fair", "Good", "Very good", "Excellent"];
 
 const RateProduct = () => {
   const [formData, setFormData] = useState({ title: "", description: "" });
-  const [rating, setRating] = useState();
-  const isLargeScreen = useMediaQuery("(min-width:1200px)");
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const dispatch = useDispatch();
   const { customersProduct } = useSelector((store) => store);
   const { productId } = useParams();
-  const navigate=useNavigate();
+  const navigate = useNavigate();
+  const product = customersProduct.product;
 
-  const handleRateProduct = (e, value) => {
-    console.log("rating ----- ", value);
-    setRating(value);
-  };
-
-  const handleChange = (e) => {
-    const name = e.target.name;
-    const value = e.target.value;
-
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-
-    console.log(formData);
-    // You can customize this handler to handle the form data as needed
-
-    dispatch(createReview({review:formData.title,productId}))
-    setFormData({title:"",description:""})
-    navigate(`/product/${productId}`)
-
-  };
   useEffect(() => {
     dispatch(findProductById({ productId }));
-  }, []);
+  }, [productId, dispatch]);
+
+  const handleChange = (e) => setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    const text = [formData.title.trim(), formData.description.trim()].filter(Boolean).join(" — ");
+    if (rating > 0) await dispatch(createRating({ productId, rating }));
+    if (text) await dispatch(createReview({ review: text, productId }));
+    navigate(`/product/${productId}`);
+  };
+
+  const shown = hover || rating;
+
   return (
-    <div className="px-5 lg:px-20">
-      <h1 className="text-xl p-5 shadow-lg mb-8 font-bold">
-        Rate & Review Product
-      </h1>
-      <Grid sx={{ justifyContent: "space-between" }} container>
-        <Grid
-          className="flex  lg:items-center shadow-lg border rounded-md p-5"
-          item
-          xs={12}
-          lg={5.8}
-        >
-          <div>
+    <div className="container-x pb-20 pt-8 lg:pt-12">
+      <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Rate & review</h1>
+
+      <div className="mt-8 grid items-start gap-8 lg:grid-cols-[22rem_1fr] xl:gap-12">
+        {product && (
+          <Link
+            to={`/product/${productId}`}
+            className="flex gap-4 rounded-3xl border border-neutral-200/80 bg-white p-4 shadow-soft lg:flex-col"
+          >
             <img
-              className="w-[5rem] lg:w-[15rem]"
-              src={customersProduct.product?.imageUrl}
+              className="h-28 w-24 rounded-2xl bg-neutral-100 object-cover object-top lg:aspect-[4/5] lg:h-auto lg:w-full"
+              src={product.imageUrl}
               alt=""
             />
-          </div>
-          <div className="ml-3 lg:ml-5 space-y-2 lg:space-y-4">
-            <p className="lg:text-lg">{customersProduct.product?.title}</p>
-            <p className="opacity-50 font-semibold">
-              {customersProduct.product?.brand}
-            </p>
-            <p>₹{customersProduct.product?.price}</p>
-            <p>Size: Free</p>
-           {customersProduct.product?.color && <p>Color: {customersProduct.product?.color}</p>}
-            <div className="flex items-center space-x-3">
-              <Rating name="read-only" value={4.6} precision={0.5} readOnly />
+            <div className="min-w-0 lg:px-1 lg:pb-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">{product.brand}</p>
+              <p className="mt-1 line-clamp-2 text-sm font-medium text-ink">{product.title}</p>
+              <p className="mt-2 text-sm font-semibold text-ink">{inr(product.discountedPrice)}</p>
+            </div>
+          </Link>
+        )}
 
-              <p className="opacity-60 text-sm">42807 Ratings</p>
-              <p className="ml-3 text-sm font-medium text-indigo-600 hover:text-indigo-500">
-                {3789} reviews
-              </p>
+        <form onSubmit={handleSubmit} className="space-y-8 rounded-3xl border border-neutral-200/80 bg-white p-6 shadow-soft sm:p-8">
+          <fieldset>
+            <legend className="text-sm font-semibold text-ink">Your rating</legend>
+            <div className="mt-3 flex items-center gap-1" onMouseLeave={() => setHover(0)}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setRating(n)}
+                  onMouseEnter={() => setHover(n)}
+                  aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                  aria-pressed={rating === n}
+                  className="rounded-md p-1 transition hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                >
+                  {n <= shown ? <StarIcon className="h-9 w-9 text-amber-500" /> : <StarOutline className="h-9 w-9 text-neutral-300" />}
+                </button>
+              ))}
+              <span className="ml-3 w-24 text-sm text-neutral-500">{shown ? labels[shown - 1] : ""}</span>
             </div>
-            <div>
-              <p className="space-y-2 font-semibold">
-                <FiberManualRecordIcon
-                  sx={{ width: "15px", height: "15px" }}
-                  className="text-green-600  mr-2"
-                />
-                <span>Delivered On Mar 03</span>{" "}
-              </p>
-              <p className="text-xs">Your Item Has Been Delivered</p>
-            </div>
+          </fieldset>
+
+          <div>
+            <label htmlFor="title" className="mb-1.5 block text-sm font-medium text-ink">
+              Headline
+            </label>
+            <input
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              placeholder="Sum it up in a few words"
+              className="field"
+            />
           </div>
-        </Grid>
-        <Grid item xs={12} lg={6}>
-          <div className={`${!isLargeScreen ? "py-10" : ""} space-y-5`}>
-            <div className="shadow-md border rounded-md p-5">
-              <Typography className="font-semibold" component="legend">
-                Rate This Product
-              </Typography>
-              <Rating
-                name="simple-controlled"
-                value={rating}
-                onChange={(event, newValue) => {
-                  handleRateProduct(event, newValue);
-                }}
-              />
-            </div>
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-5 p-5 shadow-md border rounded-md"
-            >
-              <TextField
-                label="Title"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                value={formData.title}
-                onChange={handleChange}
-                name="title"
-              />
-              <TextField
-                label="Description"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                multiline
-                rows={4}
-                value={formData.description}
-                onChange={handleChange}
-                name="description"
-              />
-              <Button type="submit" variant="contained" color="primary">
-                Submit Review
-              </Button>
-            </form>
+          <div>
+            <label htmlFor="description" className="mb-1.5 block text-sm font-medium text-ink">
+              Your review
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              rows={5}
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="What did you like or dislike? How was the fit and quality?"
+              className="field"
+            />
           </div>
-        </Grid>
-      </Grid>
+
+          <button
+            type="submit"
+            disabled={submitting || (rating === 0 && !formData.title.trim() && !formData.description.trim())}
+            className="btn-primary"
+          >
+            {submitting ? "Submitting…" : "Submit review"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

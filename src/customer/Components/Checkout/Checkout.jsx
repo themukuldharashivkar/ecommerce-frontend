@@ -1,104 +1,57 @@
 import * as React from "react";
-import Box from "@mui/material/Box";
-import Stepper from "@mui/material/Stepper";
-import Step from "@mui/material/Step";
-import StepLabel from "@mui/material/StepLabel";
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import AddDeliveryAddressForm from "./AddAddress";
 import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
+import AddDeliveryAddressForm from "./AddAddress";
 import OrderSummary from "./OrderSummary";
 
-const steps = [
-  "Login",
-  "Delivery Adress",
-  "Order Summary",
-  "Payment",
-];
+const steps = ["Bag", "Delivery address", "Order summary", "Payment"];
 
 export default function Checkout() {
-  const [activeStep, setActiveStep] = React.useState(1);
-  const [skipped, setSkipped] = React.useState(new Set());
   const location = useLocation();
-  const queryParams = new URLSearchParams(location.search);
-  const step = queryParams.get('step');
-  const navigate=useNavigate();
- 
-console.log("step",step)
+  const navigate = useNavigate();
+  const step = Number(new URLSearchParams(location.search).get("step")) || 2;
+  const active = step - 1; // step=2 -> "Delivery address"
 
-
-  const handleNext = () => {
-    let newSkipped = skipped;
-   
-
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
-    setSkipped(newSkipped);
-  };
-
-  const handleBack = () => {
-    navigate(`/checkout?step=${step-1}`)
-  };
-
-
-
-  const handleReset = () => {
-    setActiveStep(0);
-  };
-
-  const handlePayment=()=>{
-    console.log("handle payment")
-  }
+  const handleNext = () => {};
+  const handleBack = () => (step <= 2 ? navigate("/cart") : navigate(`/checkout?step=${step - 1}`));
 
   return (
-    <Box className="px-5 lg:px-32 " sx={{ width: "100%" }}>
-      <Stepper activeStep={step}>
-        {steps.map((label, index) => {
-          const stepProps = {};
-          const labelProps = {};
-         
+    <div className="container-x pb-20 pt-8 lg:pt-12">
+      <button
+        type="button"
+        onClick={handleBack}
+        className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-neutral-600 transition hover:text-ink"
+      >
+        <ArrowLeftIcon className="h-4 w-4" /> Back
+      </button>
+
+      <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Checkout</h1>
+
+      <ol className="mt-8 flex items-center" aria-label="Checkout progress">
+        {steps.map((label, i) => {
+          const done = i < active;
+          const current = i === active;
           return (
-            <Step key={label} {...stepProps}>
-              <StepLabel {...labelProps}>{label}</StepLabel>
-            </Step>
+            <li key={label} className={`flex items-center ${i < steps.length - 1 ? "flex-1" : ""}`} aria-current={current ? "step" : undefined}>
+              <span className="flex items-center gap-2.5">
+                <span
+                  className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold transition ${
+                    done ? "bg-success text-white" : current ? "bg-ink text-white" : "bg-neutral-200 text-neutral-500"
+                  }`}
+                >
+                  {done ? <CheckIcon className="h-4 w-4" strokeWidth={3} /> : i + 1}
+                </span>
+                <span className={`hidden text-sm sm:inline ${current ? "font-semibold text-ink" : "text-neutral-500"}`}>{label}</span>
+              </span>
+              {i < steps.length - 1 && (
+                <span className={`mx-3 h-px flex-1 sm:mx-4 ${done ? "bg-success" : "bg-neutral-300"}`} />
+              )}
+            </li>
           );
         })}
-      </Stepper>
-      {activeStep === steps.length ? (
-        <React.Fragment>
-          <Typography sx={{ mt: 2, mb: 1 }}>
-            All steps completed - you&apos;re finished
-          </Typography>
-          <Box sx={{ display: "flex", flexDirection: "row", pt: 2 }}>
-            <Box sx={{ flex: "1 1 auto" }} />
-            <Button onClick={handleReset}>Reset</Button>
-          </Box>
-        </React.Fragment>
-      ) : (
-        <React.Fragment>
-          <Box sx={{ display: "flex", flexDirection: "row", pt: 2 }}>
-            <Button
-              color="inherit"
-              disabled={step == 2}
-              onClick={handleBack}
-              sx={{ mr: 1 }}
-            >
-              Back
-            </Button>
-            <Box sx={{ flex: "1 1 auto" }} />
+      </ol>
 
-            
-          </Box>
-          {/* <Typography sx={{ my: 6 }}>Title</Typography> */}
-
-          <div className="my-5">
-            {step == 2? <AddDeliveryAddressForm handleNext={handleNext} />:<OrderSummary/>}
-          </div>
-
-          {/* <AddDeliveryAddressForm handleNext={handleNext} /> */}
-
-          
-        </React.Fragment>
-      )}
-    </Box>
+      <div className="mt-10">{step === 2 ? <AddDeliveryAddressForm handleNext={handleNext} /> : <OrderSummary />}</div>
+    </div>
   );
 }

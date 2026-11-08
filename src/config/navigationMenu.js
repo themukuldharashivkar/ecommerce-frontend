@@ -1,124 +1,81 @@
+// Single source of truth for storefront categories.
+// Only categories that actually have products are listed so every link lands on a populated page.
+const IMG = (path) => `https://rukminim1.flixcart.com/image/612/612/${path}?q=70`;
+
+export const categoryImages = {
+  women_dress: IMG("xif0q/dress/a/x/z/l-na-awd-19-yellow-aarvia-original-imagzffm3bkyzup2.jpeg"),
+  saree: IMG("xif0q/lehenga-choli/y/g/m/l-sleeveless-shset95222-shae-by-sassafras-original-imaggjzkwyyyezzg.jpeg"),
+  gouns: IMG("kw5ag7k0/kurta/f/j/g/xxl-sg1011-sanganeri-feb-original-imag8w9xbbakjkju.jpeg"),
+  kurtas: IMG("xif0q/ethnic-set/b/4/m/m-na-kurta-set-010-rama-woxen-original-imagzkgg8mnyxmcg.jpeg"),
+  top: IMG("xif0q/top/8/t/m/xxl-amrcrochetlacetop-madstitches-apparels-private-limited-original-imagr39r3kfmb5vy.jpeg"),
+  women_jeans: IMG("kggviq80-0/jean/d/j/v/30-xj-37-gry-30-zxn-clothing-original-imafwp9gnqtwwebg.jpeg"),
+  mens_kurta: IMG("l5h2xe80/kurta/x/6/n/xl-kast-tile-green-majestic-man-original-imagg4z33hu4kzpv.jpeg"),
+  shirt: IMG("k4d27ww0/shirt/q/w/t/l-el024-el-senor-original-imafnadnjp5pq6tg.jpeg"),
+  men_jeans: IMG("xif0q/jean/h/y/g/34-jeans-bt008-laheja-original-imagqqbsfgmdhcvn.jpeg"),
+  shoes: IMG("l08gsy80/shoe/n/a/n/9-assg1015-9-abros-l-grey-maroon-original-imagc2m9zbzmtybx.jpeg"),
+};
+
 export const navigation = {
-    categories: [
-      {
-        id: 'women',
-        name: 'Women',
-        featured: [
-          {
-            name: 'New Arrivals',
-            href: '/',
-            imageSrc: 'https://tailwindui.com/img/ecommerce-images/mega-menu-category-01.jpg',
-            imageAlt: 'Models sitting back to back, wearing Basic Tee in black and bone.',
-          },
-          {
-            name: 'Basic Tees',
-            href: '/',
-            imageSrc: 'https://tailwindui.com/img/ecommerce-images/mega-menu-category-02.jpg',
-            imageAlt: 'Close up of Basic Tee fall bundle with off-white, ochre, olive, and black tees.',
-          },
-        ],
-        sections: [
-          {
-            id: 'clothing',
-            name: 'Clothing',
-            items: [
-              { name: 'Tops', id:"top", href: `{women/clothing/tops}` },
-              { name: 'Dresses', id:"women_dress", href: '#' },
-              { name: 'Women Jeans', id: 'women_jeans' },
-              { name: 'Lengha Choli', id: 'lengha_choli' },
-              { name: 'Sweaters', id: 'sweater' },
-              { name: 'T-Shirts', id: 't-shirt' },
-              { name: 'Jackets', id: 'jacket' },
-              { name: 'Gouns', id: 'gouns' },
-              { name: 'Sarees', id: 'saree' },
-              { name: 'Kurtas', id: 'kurtas' },
-            ],
-          },
-          {
-            id: 'accessories',
-            name: 'Accessories',
-            items: [
-              { name: 'Watches', id: 'watch' },
-              { name: 'Wallets', id: 'wallet' },
-              { name: 'Bags', id: 'bag' },
-              { name: 'Sunglasses', id: 'sunglasse' },
-              { name: 'Hats', id: 'hat' },
-              { name: 'Belts', id: 'belt' },
-            ],
-          },
-          {
-            id: 'brands',
-            name: 'Brands',
-            items: [
-              { name: 'Full Nelson', id: '#' },
-              { name: 'My Way', id: '#' },
-              { name: 'Re-Arranged', id: '#' },
-              { name: 'Counterfeit', id: '#' },
-              { name: 'Significant Other', id: '#' },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'men',
-        name: 'Men',
-        featured: [
-          {
-            name: 'New Arrivals',
-            id: '#',
-            imageSrc: 'https://tailwindui.com/img/ecommerce-images/product-page-04-detail-product-shot-01.jpg',
-            imageAlt: 'Drawstring top with elastic loop closure and textured interior padding.',
-          },
-          {
-            name: 'Artwork Tees',
-            id: '#',
-            imageSrc: 'https://tailwindui.com/img/ecommerce-images/category-page-02-image-card-06.jpg',
-            imageAlt:
-              'Three shirts in gray, white, and blue arranged on table with same line drawing of hands and shapes overlapping on front of shirt.',
-          },
-        ],
-        sections: [
-          {
-            id: 'clothing',
-            name: 'Clothing',
-            items: [
-              { name: 'Mens Kurtas', id: 'mens_kurta' },
-              { name: 'Shirt', id: 'shirt' },
-              { name: 'Men Jeans', id: 'men_jeans' },
-              { name: 'Sweaters', id: '#' },
-              { name: 'T-Shirts', id: 't-shirt' },
-              { name: 'Jackets', id: '#' },
-              { name: 'Activewear', id: '#' },
-              
-            ],
-          },
-          {
-            id: 'accessories',
-            name: 'Accessories',
-            items: [
-              { name: 'Watches', id: '#' },
-              { name: 'Wallets', id: '#' },
-              { name: 'Bags', id: '#' },
-              { name: 'Sunglasses', id: '#' },
-              { name: 'Hats', id: '#' },
-              { name: 'Belts', id: '#' },
-            ],
-          },
-          {
-            id: 'brands',
-            name: 'Brands',
-            items: [
-              { name: 'Re-Arranged', id: '#' },
-              { name: 'Counterfeit', id: '#' },
-              { name: 'Full Nelson', id: '#' },
-              { name: 'My Way', id: '#' },
-            ],
-          },
-        ],
-      },
-    ],
-    pages: [
-      { name: 'Company', id: '/' },
-      { name: 'Stores', id: '/' },
-    ],
-  }
+  categories: [
+    {
+      id: "women",
+      name: "Women",
+      sections: [
+        {
+          id: "clothing",
+          name: "Clothing",
+          items: [
+            { name: "Dresses", id: "women_dress" },
+            { name: "Tops", id: "top" },
+            { name: "Jeans", id: "women_jeans" },
+            { name: "Sarees & Lehengas", id: "saree" },
+            { name: "Gowns", id: "gouns" },
+            { name: "Kurtas & Sets", id: "kurtas" },
+          ],
+        },
+      ],
+      featured: [
+        { name: "Dresses", path: "/women/clothing/women_dress", image: categoryImages.women_dress },
+        { name: "Sarees & Lehengas", path: "/women/clothing/saree", image: categoryImages.saree },
+      ],
+    },
+    {
+      id: "men",
+      name: "Men",
+      sections: [
+        {
+          id: "clothing",
+          name: "Clothing",
+          items: [
+            { name: "Kurtas", id: "mens_kurta" },
+            { name: "Shirts", id: "shirt" },
+            { name: "Jeans", id: "men_jeans" },
+          ],
+        },
+        {
+          id: "footwear",
+          name: "Footwear",
+          items: [{ name: "Shoes", id: "shoes" }],
+        },
+      ],
+      featured: [
+        { name: "Shirts", path: "/men/clothing/shirt", image: categoryImages.shirt },
+        { name: "Shoes", path: "/men/footwear/shoes", image: categoryImages.shoes },
+      ],
+    },
+  ],
+  pages: [
+    { name: "About", path: "/about" },
+    { name: "Contact", path: "/contact" },
+  ],
+};
+
+// Flat lookup used for titles / breadcrumbs: category id -> { label, gender, section }
+export const categoryIndex = {};
+navigation.categories.forEach((c) =>
+  c.sections.forEach((s) =>
+    s.items.forEach((i) => {
+      categoryIndex[i.id] = { label: i.name, gender: c.name, genderId: c.id, section: s.name, sectionId: s.id };
+    })
+  )
+);

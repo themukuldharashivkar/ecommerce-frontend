@@ -1,85 +1,50 @@
-import React from "react";
-import { Badge, Button } from "@mui/material";
-import { useLocation, useNavigate } from "react-router-dom";
-import CartItem from "../Cart/CartItem";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { getOrderById } from "../../../Redux/Customers/Order/Action";
+import CartItem from "../Cart/CartItem";
+import PriceSummary from "../Cart/PriceSummary";
 import AddressCard from "../adreess/AdreessCard";
+import { getOrderById } from "../../../Redux/Customers/Order/Action";
 import { createPayment } from "../../../Redux/Customers/Payment/Action";
 
 const OrderSummary = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-const orderId = searchParams.get("order_id");
-const dispatch=useDispatch();
-  const jwt=localStorage.getItem("jwt");
-  const {order}=useSelector(state=>state)
+  const orderId = new URLSearchParams(location.search).get("order_id");
+  const dispatch = useDispatch();
+  const jwt = localStorage.getItem("jwt");
+  const { order } = useSelector((state) => state);
+  const [paying, setPaying] = React.useState(false);
 
-console.log("orderId ", order.order)
+  useEffect(() => {
+    dispatch(getOrderById(orderId));
+  }, [orderId, dispatch]);
 
-useEffect(()=>{
-  
-  dispatch(getOrderById(orderId))
-},[orderId])
-
-const handleCreatePayment=()=>{
-  const data={orderId:order.order?.id,jwt}
-  dispatch(createPayment(data))
-}
-  
+  const handleCreatePayment = async () => {
+    setPaying(true);
+    await dispatch(createPayment({ orderId: order.order?.id, jwt }));
+    setPaying(false); // only reached if the redirect to Razorpay did not happen
+  };
 
   return (
-    <div className="space-y-5">
-        <div className="p-5 shadow-lg rounded-md border ">
-            <AddressCard address={order.order?.shippingAddress}/>
+    <div className="grid items-start gap-8 lg:grid-cols-[1fr_24rem] xl:gap-12">
+      <div className="space-y-6">
+        <div className="rounded-3xl border border-neutral-200/80 bg-white p-5 shadow-soft sm:p-6">
+          <h2 className="mb-4 text-base font-semibold text-ink">Delivering to</h2>
+          <AddressCard address={order.order?.shippingAddress} />
         </div>
-      <div className="lg:grid grid-cols-3 relative justify-between">
-        <div className="lg:col-span-2 ">
-          <div className=" space-y-3">
-            {order.order?.orderItems.map((item) => (
-              <>
-                <CartItem item={item} showButton={false}/>
-              </>
-            ))}
-          </div>
+        <div className="space-y-4">
+          {order.order?.orderItems.map((item) => (
+            <CartItem key={item.id} item={item} showButton={false} />
+          ))}
         </div>
-        <div className="sticky top-0 h-[100vh] mt-5 lg:mt-0 ml-5">
-          <div className="border p-5 bg-white shadow-lg rounded-md">
-            <p className="font-bold opacity-60 pb-4">PRICE DETAILS</p>
-            <hr />
-
-            <div className="space-y-3 font-semibold">
-              <div className="flex justify-between pt-3 text-black ">
-                <span>Price ({order.order?.totalItem} item)</span>
-                <span>₹{order.order?.totalPrice}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Discount</span>
-                <span className="text-green-700">-₹{order.order?.discounte}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Delivery Charges</span>
-                <span className="text-green-700">Free</span>
-              </div>
-              <hr />
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total Amount</span>
-                <span className="text-green-700">₹{order.order?.totalDiscountedPrice}</span>
-              </div>
-            </div>
-
-            <Button
-              onClick={handleCreatePayment}
-              variant="contained"
-              type="submit"
-              sx={{ padding: ".8rem 2rem", marginTop: "2rem", width: "100%" }}
-            >
-              Payment
-            </Button>
-          </div>
-        </div>
+      </div>
+      <div className="lg:sticky lg:top-28">
+        <PriceSummary data={order.order}>
+          <button type="button" onClick={handleCreatePayment} disabled={!order.order || paying} className="btn-primary mt-6 w-full">
+            {paying ? "Redirecting to payment…" : "Pay securely"}
+          </button>
+          <p className="mt-3 text-center text-xs text-neutral-500">You’ll be taken to Razorpay to complete payment.</p>
+        </PriceSummary>
       </div>
     </div>
   );

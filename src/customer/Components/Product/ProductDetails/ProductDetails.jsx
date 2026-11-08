@@ -1,507 +1,429 @@
-import { useState } from "react";
-import { RadioGroup } from "@headlessui/react";
-import { useNavigate, useParams } from "react-router-dom";
-import ProductReviewCard from "./ProductReviewCard";
-import { Box, Button, Grid, LinearProgress, Rating } from "@mui/material";
-import HomeProductCard from "../../Home/HomeProductCard";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Disclosure } from "@headlessui/react";
+import {
+  ArrowPathIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  LockClosedIcon,
+  TruckIcon,
+} from "@heroicons/react/24/outline";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { findProductById } from "../../../../Redux/Customers/Product/Action";
-import { addItemToCart } from "../../../../Redux/Customers/Cart/Action";
+import { addItemToCart, getCart } from "../../../../Redux/Customers/Cart/Action";
 import { getAllReviews } from "../../../../Redux/Customers/Review/Action";
-import { lengha_page1 } from "../../../../Data/Women/LenghaCholi";
-import { gounsPage1 } from "../../../../Data/Gouns/gouns";
+import { categoryIndex } from "../../../../config/navigationMenu";
+import ProductReviewCard from "./ProductReviewCard";
+import ProductCard, { ProductCardSkeleton } from "../ProductCard/ProductCard";
+import useCategoryProducts from "../../Home/useCategoryProducts";
+import Stars from "../../ui/Stars";
+import Reveal from "../../ui/Reveal";
+import { avgRating, inr } from "../../ui/format";
 
-const product = {
-  name: "Basic Tee 6-Pack",
-  price: "₹996",
-  href: "#",
-  breadcrumbs: [
-    { id: 1, name: "Men", href: "#" },
-    { id: 2, name: "Clothing", href: "#" },
-  ],
-  images: [
-    {
-      src: "https://tailwindui.com/img/ecommerce-images/product-page-02-secondary-product-shot.jpg",
-      alt: "Two each of gray, white, and black shirts laying flat.",
-    },
-    {
-      src: "https://tailwindui.com/img/ecommerce-images/product-page-02-tertiary-product-shot-01.jpg",
-      alt: "Model wearing plain black basic tee.",
-    },
-    {
-      src: "https://tailwindui.com/img/ecommerce-images/product-page-02-tertiary-product-shot-02.jpg",
-      alt: "Model wearing plain gray basic tee.",
-    },
-    {
-      src: "https://tailwindui.com/img/ecommerce-images/product-page-02-featured-product-shot.jpg",
-      alt: "Model wearing plain white basic tee.",
-    },
-  ],
-  colors: [
-    { name: "White", class: "bg-white", selectedClass: "ring-gray-400" },
-    { name: "Gray", class: "bg-gray-200", selectedClass: "ring-gray-400" },
-    { name: "Black", class: "bg-gray-900", selectedClass: "ring-gray-900" },
-  ],
-  sizes: [
-    { name: "S", inStock: true },
-    { name: "M", inStock: true },
-    { name: "L", inStock: true },
-  ],
-  description:
-    'The Basic Tee 6-Pack allows you to fully express your vibrant personality with three grayscale options. Feeling adventurous? Put on a heather gray tee. Want to be a trendsetter? Try our exclusive colorway: "Black". Need to add an extra pop of color to your outfit? Our white tee has you covered.',
-  highlights: [
-    "Hand cut and sewn locally",
-    "Dyed with our proprietary colors",
-    "Pre-washed & pre-shrunk",
-    "Ultra-soft 100% cotton",
-  ],
-  details:
-    'The 6-Pack includes two black, two white, and two heather gray Basic Tees. Sign up for our subscription service and be the first to get new, exciting colors, like our upcoming "Charcoal Gray" limited release.',
-};
-const reviews = { href: "#", average: 4, totalCount: 117 };
+const cx = (...c) => c.filter(Boolean).join(" ");
 
-function classNames(...classes) {
-  return classes.filter(Boolean).join(" ");
+function Accordion({ title, children, defaultOpen = false }) {
+  return (
+    <Disclosure as="div" defaultOpen={defaultOpen} className="border-b border-neutral-200">
+      {({ open }) => (
+        <>
+          <Disclosure.Button className="flex w-full items-center justify-between py-5 text-left text-sm font-semibold text-ink">
+            {title}
+            <ChevronDownIcon className={cx("h-4 w-4 text-neutral-500 transition-transform", open && "rotate-180")} />
+          </Disclosure.Button>
+          <Disclosure.Panel className="pb-5 text-sm leading-relaxed text-neutral-600">{children}</Disclosure.Panel>
+        </>
+      )}
+    </Disclosure>
+  );
+}
+
+function SimilarProducts({ category, currentId }) {
+  const { items, loading } = useCategoryProducts(category, { size: 9 });
+  const list = items.filter((p) => p.id !== currentId).slice(0, 4);
+  if (!loading && list.length === 0) return null;
+  return (
+    <section className="mt-20">
+      <h2 className="mb-7 text-2xl font-semibold tracking-tight text-ink">You may also like</h2>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-9 sm:gap-x-5 lg:grid-cols-4">
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
+          : list.map((p) => <ProductCard key={p.id} product={p} />)}
+      </div>
+    </section>
+  );
+}
+
+function DetailsSkeleton() {
+  return (
+    <div className="container-x grid gap-10 py-10 lg:grid-cols-2 lg:gap-16">
+      <div className="skeleton aspect-[4/5] w-full rounded-3xl" />
+      <div className="space-y-5 pt-4">
+        <div className="skeleton h-4 w-24" />
+        <div className="skeleton h-9 w-4/5" />
+        <div className="skeleton h-7 w-40" />
+        <div className="skeleton mt-8 h-12 w-full" />
+        <div className="skeleton h-12 w-full" />
+      </div>
+    </div>
+  );
 }
 
 export default function ProductDetails() {
-  const [selectedSize, setSelectedSize] = useState();
-  const [activeImage, setActiveImage] = useState(null);
+  const [selectedSize, setSelectedSize] = useState(null);
+  const [sizeError, setSizeError] = useState(false);
+  const [status, setStatus] = useState("idle"); // idle | adding | added | error
+  const [zoom, setZoom] = useState({ on: false, x: 50, y: 50 });
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { customersProduct } = useSelector((store) => store);
   const { productId } = useParams();
   const jwt = localStorage.getItem("jwt");
-  // console.log("param",productId,customersProduct.product)
-
-  const handleSetActiveImage = (image) => {
-    setActiveImage(image);
-  };
-
-  const handleSubmit = () => {
-    const data = { productId, size: selectedSize.name };
-    dispatch(addItemToCart({ data, jwt }));
-    navigate("/cart");
-  };
+  const timer = useRef(null);
 
   useEffect(() => {
-    const data = { productId: Number(productId), jwt };
-    dispatch(findProductById(data));
+    setSelectedSize(null);
+    setSizeError(false);
+    setStatus("idle");
+    window.scrollTo({ top: 0 });
+    dispatch(findProductById({ productId: Number(productId), jwt }));
     dispatch(getAllReviews(productId));
+    return () => clearTimeout(timer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
+  const product = customersProduct.product;
+  const ready = product && String(product.id) === String(productId);
+
+  const meta = ready ? categoryIndex[product.category?.name] : null;
+  const rating = useMemo(() => avgRating(product?.ratings), [product]);
+  const ratingCount = product?.ratings?.length || 0;
+  const dist = useMemo(() => {
+    const d = [5, 4, 3, 2, 1].map((n) => ({ n, c: 0 }));
+    (product?.ratings || []).forEach((r) => {
+      const k = d.find((x) => x.n === Math.round(r.rating));
+      if (k) k.c += 1;
+    });
+    return d;
+  }, [product]);
+
+  const sizes = (product?.sizes || []).slice().sort((a, b) => ["XS", "S", "M", "L", "XL", "XXL"].indexOf(a.name) - ["XS", "S", "M", "L", "XL", "XXL"].indexOf(b.name));
+  const soldOut = ready && (product.quantity < 1 || (sizes.length > 0 && sizes.every((s) => s.quantity < 1)));
+
+  const handleAdd = async (e) => {
+    e?.preventDefault();
+    if (!jwt) {
+      navigate("/login");
+      return;
+    }
+    if (!selectedSize) {
+      setSizeError(true);
+      return;
+    }
+    setStatus("adding");
+    const ok = await dispatch(addItemToCart({ data: { productId, size: selectedSize }, jwt }));
+    if (ok) {
+      await dispatch(getCart(jwt));
+      setStatus("added");
+      timer.current = setTimeout(() => setStatus("idle"), 4000);
+    } else {
+      setStatus("error");
+    }
+  };
+
+  if (!ready) return <DetailsSkeleton />;
+
+  const saved = product.price - product.discountedPrice;
+  const reviews = product.reviews || [];
+
+  const addButton = (className = "") => (
+    <button
+      type="button"
+      onClick={handleAdd}
+      disabled={soldOut || status === "adding"}
+      className={cx(status === "added" ? "btn bg-success text-white" : "btn-primary", "w-full", className)}
+    >
+      {soldOut ? (
+        "Sold out"
+      ) : status === "adding" ? (
+        "Adding…"
+      ) : status === "added" ? (
+        <>
+          <CheckIcon className="h-5 w-5" strokeWidth={2.5} /> Added to bag
+        </>
+      ) : (
+        "Add to bag"
+      )}
+    </button>
+  );
+
   return (
-    <div className="bg-white lg:px-20">
-      <div className="pt-6">
-        <nav aria-label="Breadcrumb">
-          <ol
-            role="list"
-            className="mx-auto flex max-w-2xl items-center space-x-2 px-4 sm:px-6 lg:max-w-7xl lg:px-8"
-          >
-            {product.breadcrumbs.map((breadcrumb) => (
-              <li key={breadcrumb.id}>
-                <div className="flex items-center">
-                  <a
-                    href={"/"}
-                    className="mr-2 text-sm font-medium text-gray-900"
-                  >
-                    {breadcrumb.name}
-                  </a>
-                  <svg
-                    width={16}
-                    height={20}
-                    viewBox="0 0 16 20"
-                    fill="currentColor"
-                    aria-hidden="true"
-                    className="h-5 w-4 text-gray-300"
-                  >
-                    <path d="M5.697 4.34L8.98 16.532h1.327L7.025 4.341H5.697z" />
-                  </svg>
-                </div>
-              </li>
-            ))}
-            <li className="text-sm">
-              <a
-                href={product.href}
-                aria-current="page"
-                className="font-medium text-gray-500 hover:text-gray-600"
+    <div className="pb-28 lg:pb-0">
+      <div className="container-x pt-6">
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-neutral-500">
+          <Link to="/" className="hover:text-ink">
+            Home
+          </Link>
+          {meta && (
+            <>
+              <ChevronRightIcon className="h-3 w-3" />
+              <Link
+                to={`/${meta.genderId}/${meta.sectionId}/${product.category.name}`}
+                className="hover:text-ink"
               >
-                {/* {product.name} */}
-                {customersProduct.product?.title}
-              </a>
-            </li>
-          </ol>
+                {meta.gender}’s {meta.label}
+              </Link>
+            </>
+          )}
+          <ChevronRightIcon className="h-3 w-3" />
+          <span className="max-w-[16rem] truncate font-medium text-ink">{product.title}</span>
         </nav>
 
-        {/* product details */}
-        <section className="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2 px-4 pt-10">
-          {/* Image gallery */}
-          <div className="flex flex-col items-center ">
-            <div className=" overflow-hidden rounded-lg max-w-[30rem] max-h-[35rem]">
+        <section className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-16">
+          {/* image */}
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <div
+              className="group relative aspect-[4/5] cursor-zoom-in overflow-hidden rounded-3xl bg-neutral-100"
+              onMouseEnter={() => setZoom((z) => ({ ...z, on: true }))}
+              onMouseLeave={() => setZoom({ on: false, x: 50, y: 50 })}
+              onMouseMove={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                setZoom({ on: true, x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 });
+              }}
+            >
               <img
-                src={activeImage?.src || customersProduct.product?.imageUrl}
-                alt={product.images[0].alt}
-                className="h-full w-full object-cover object-center"
+                src={product.imageUrl}
+                alt={product.title}
+                className="h-full w-full object-cover object-top transition-transform duration-300 ease-out"
+                style={{
+                  transform: zoom.on ? "scale(1.7)" : "scale(1)",
+                  transformOrigin: `${zoom.x}% ${zoom.y}%`,
+                }}
               />
-            </div>
-            <div className="flex flex-wrap space-x-5 justify-center">
-              {product.images.map((image) => (
-                <div
-                  onClick={() => handleSetActiveImage(image)}
-                  className="aspect-h-2 aspect-w-3 overflow-hidden rounded-lg max-w-[5rem] max-h-[5rem] mt-4"
-                >
-                  <img
-                    src={image.src}
-                    alt={product.images[1].alt}
-                    className="h-full w-full object-cover object-center"
-                  />
-                </div>
-              ))}
+              {product.discountPersent > 0 && (
+                <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-sale shadow-sm backdrop-blur">
+                  -{product.discountPersent}% OFF
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Product info */}
-          <div className="lg:col-span-1 mx-auto max-w-2xl px-4 pb-16 sm:px-6  lg:max-w-7xl  lg:px-8 lg:pb-24">
-            <div className="lg:col-span-2">
-              <h1 className="text-lg lg:text-xl font-semibold tracking-tight text-gray-900  ">
-                {customersProduct.product?.brand}
-              </h1>
-              <h1 className="text-lg lg:text-xl tracking-tight text-gray-900 opacity-60 pt-1">
-                {customersProduct.product?.title}
-              </h1>
+          {/* info */}
+          <div className="lg:py-2">
+            <p className="eyebrow">{product.brand}</p>
+            <h1 className="mt-2 text-2xl font-semibold leading-snug tracking-tight text-ink sm:text-3xl">{product.title}</h1>
+
+            <div className="mt-4 flex items-center gap-3">
+              {ratingCount > 0 ? (
+                <>
+                  <Stars value={rating} size={18} />
+                  <span className="text-sm font-medium text-ink">{rating.toFixed(1)}</span>
+                  <a href="#reviews" className="text-sm text-neutral-500 underline-offset-4 hover:underline">
+                    {ratingCount} {ratingCount === 1 ? "rating" : "ratings"}
+                  </a>
+                </>
+              ) : (
+                <a href="#reviews" className="text-sm text-neutral-500 underline-offset-4 hover:underline">
+                  No ratings yet
+                </a>
+              )}
             </div>
 
-            {/* Options */}
-            <div className="mt-4 lg:row-span-3 lg:mt-0">
-              <h2 className="sr-only">Product information</h2>
-              <div className="flex space-x-5 items-center text-lg lg:text-xl tracking-tight text-gray-900 mt-6">
-                <p className="font-semibold">
-                  ₹{customersProduct.product?.discountedPrice}
-                </p>
-                <p className="opacity-50 line-through">
-                  ₹{customersProduct.product?.price}
-                </p>
-                <p className="text-green-600 font-semibold">
-                  {customersProduct.product?.discountPersent}% Off
-                </p>
-              </div>
+            <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-3xl font-semibold tracking-tight text-ink">{inr(product.discountedPrice)}</span>
+              {product.price > product.discountedPrice && (
+                <>
+                  <span className="text-lg text-neutral-400 line-through">{inr(product.price)}</span>
+                  <span className="text-sm font-semibold text-success">
+                    You save {inr(saved)} ({product.discountPersent}%)
+                  </span>
+                </>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-neutral-500">Inclusive of all taxes</p>
 
-              {/* Reviews */}
-              <div className="mt-6">
-                <h3 className="sr-only">Reviews</h3>
+            {product.color && (
+              <p className="mt-6 text-sm text-neutral-600">
+                Colour: <span className="font-semibold capitalize text-ink">{product.color}</span>
+              </p>
+            )}
 
-                <div className="flex items-center space-x-3">
-                  <Rating
-                    name="read-only"
-                    value={4.6}
-                    precision={0.5}
-                    readOnly
-                  />
-
-                  <p className="opacity-60 text-sm">42807 Ratings</p>
-                  <p className="ml-3 text-sm font-medium text-indigo-600 hover:text-indigo-500">
-                    {reviews.totalCount} reviews
+            {/* sizes */}
+            <div className="mt-7">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-ink">Select size</h2>
+                {sizeError && (
+                  <p role="alert" className="text-sm font-medium text-sale">
+                    Please choose a size
                   </p>
-                </div>
+                )}
               </div>
+              <div className="mt-3 flex flex-wrap gap-2.5" role="radiogroup" aria-label="Size">
+                {sizes.map((s) => {
+                  const out = s.quantity < 1;
+                  const on = selectedSize === s.name;
+                  return (
+                    <button
+                      key={s.name}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      disabled={out}
+                      onClick={() => {
+                        setSelectedSize(s.name);
+                        setSizeError(false);
+                      }}
+                      className={cx(
+                        "chip !h-12 !min-w-[4rem]",
+                        on && "chip-active",
+                        out && "!cursor-not-allowed !border-neutral-200 !bg-neutral-50 !text-neutral-300 line-through hover:!border-neutral-200",
+                        sizeError && !on && !out && "!border-sale/60"
+                      )}
+                    >
+                      {s.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {sizes.length > 0 && !soldOut && (
+                <p className="mt-3 text-xs text-neutral-500">
+                  {selectedSize
+                    ? `${sizes.find((s) => s.name === selectedSize)?.quantity} left in size ${selectedSize}`
+                    : "Pick a size to continue"}
+                </p>
+              )}
+            </div>
 
-              <form className="mt-10" onSubmit={handleSubmit}>
-                {/* Sizes */}
-                <div className="mt-10">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-gray-900">Size</h3>
+            <div className="mt-8 hidden gap-3 lg:flex">
+              {addButton()}
+            </div>
+            {status === "added" && (
+              <div className="mt-3 flex items-center justify-between rounded-2xl bg-success/10 px-4 py-3 text-sm text-success animate-fade-in">
+                <span className="font-medium">Added to your bag.</span>
+                <Link to="/cart" className="font-semibold underline underline-offset-4">
+                  View bag
+                </Link>
+              </div>
+            )}
+            {status === "error" && (
+              <p role="alert" className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                We couldn’t add this item. Please try again.
+              </p>
+            )}
+
+            <ul className="mt-8 grid gap-3 rounded-2xl bg-white p-5 text-sm text-neutral-700 ring-1 ring-neutral-200">
+              <li className="flex items-center gap-3">
+                <TruckIcon className="h-5 w-5 text-ink" /> Free delivery on orders over ₹500
+              </li>
+              <li className="flex items-center gap-3">
+                <ArrowPathIcon className="h-5 w-5 text-ink" /> 7-day easy returns
+              </li>
+              <li className="flex items-center gap-3">
+                <LockClosedIcon className="h-5 w-5 text-ink" /> Secure payments via Razorpay
+              </li>
+            </ul>
+
+            <div className="mt-8 border-t border-neutral-200">
+              <Accordion title="Description" defaultOpen>
+                {product.description || "No description available."}
+              </Accordion>
+              <Accordion title="Product details">
+                <dl className="grid grid-cols-[7rem_1fr] gap-y-2">
+                  <dt className="text-neutral-500">Brand</dt>
+                  <dd className="text-ink">{product.brand}</dd>
+                  {product.color && (
+                    <>
+                      <dt className="text-neutral-500">Colour</dt>
+                      <dd className="capitalize text-ink">{product.color}</dd>
+                    </>
+                  )}
+                  {meta && (
+                    <>
+                      <dt className="text-neutral-500">Category</dt>
+                      <dd className="text-ink">
+                        {meta.gender} · {meta.label}
+                      </dd>
+                    </>
+                  )}
+                  <dt className="text-neutral-500">Sizes</dt>
+                  <dd className="text-ink">{sizes.map((s) => s.name).join(", ") || "—"}</dd>
+                </dl>
+              </Accordion>
+              <Accordion title="Delivery & returns">
+                Orders ship within 1–2 business days and usually arrive in 3–6 days. Not the right fit? Return it within
+                7 days of delivery for a full refund.
+              </Accordion>
+            </div>
+          </div>
+        </section>
+
+        {/* reviews */}
+        <Reveal as="section" id="reviews" className="mt-20 scroll-mt-28">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <h2 className="text-2xl font-semibold tracking-tight text-ink">Ratings & reviews</h2>
+            <Link to={`/account/rate/${product.id}`} className="btn-secondary btn-sm">
+              Write a review
+            </Link>
+          </div>
+          <div className="grid gap-10 lg:grid-cols-[20rem_1fr] lg:gap-16">
+            <div>
+              {ratingCount > 0 ? (
+                <>
+                  <div className="flex items-end gap-3">
+                    <span className="text-5xl font-semibold tracking-tight text-ink">{rating.toFixed(1)}</span>
+                    <span className="pb-1.5 text-sm text-neutral-500">out of 5</span>
                   </div>
-
-                  <RadioGroup
-                    value={selectedSize}
-                    onChange={setSelectedSize}
-                    className="mt-4"
-                  >
-                    <RadioGroup.Label className="sr-only">
-                      Choose a size
-                    </RadioGroup.Label>
-                    <div className="grid grid-cols-4 gap-4 sm:grid-cols-8 lg:grid-cols-10">
-                      {product.sizes.map((size) => (
-                        <RadioGroup.Option
-                          key={size.name}
-                          value={size}
-                          disabled={!size.inStock}
-                          className={({ active }) =>
-                            classNames(
-                              size.inStock
-                                ? "cursor-pointer bg-white text-gray-900 shadow-sm"
-                                : "cursor-not-allowed bg-gray-50 text-gray-200",
-                              active ? "ring-1 ring-indigo-500" : "",
-                              "group relative flex items-center justify-center rounded-md border py-1 px-1 text-sm font-medium uppercase hover:bg-gray-50 focus:outline-none sm:flex-1 sm:py-6"
-                            )
-                          }
-                        >
-                          {({ active, checked }) => (
-                            <>
-                              <RadioGroup.Label as="span">
-                                {size.name}
-                              </RadioGroup.Label>
-                              {size.inStock ? (
-                                <span
-                                  className={classNames(
-                                    active ? "border" : "border-2",
-                                    checked
-                                      ? "border-indigo-500"
-                                      : "border-transparent",
-                                    "pointer-events-none absolute -inset-px rounded-md"
-                                  )}
-                                  aria-hidden="true"
-                                />
-                              ) : (
-                                <span
-                                  aria-hidden="true"
-                                  className="pointer-events-none absolute -inset-px rounded-md border-2 border-gray-200"
-                                >
-                                  <svg
-                                    className="absolute inset-0 h-full w-full stroke-2 text-gray-200"
-                                    viewBox="0 0 100 100"
-                                    preserveAspectRatio="none"
-                                    stroke="currentColor"
-                                  >
-                                    <line
-                                      x1={0}
-                                      y1={100}
-                                      x2={100}
-                                      y2={0}
-                                      vectorEffect="non-scaling-stroke"
-                                    />
-                                  </svg>
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </RadioGroup.Option>
-                      ))}
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                <Button
-                  variant="contained"
-                  type="submit"
-                  sx={{ padding: ".8rem 2rem", marginTop: "2rem" }}
-                >
-                  Add To Cart
-                </Button>
-              </form>
-            </div>
-
-            <div className="py-10 lg:col-span-2 lg:col-start-1 lg:border-r lg:border-gray-200 lg:pb-16 lg:pr-8 lg:pt-6">
-              {/* Description and details */}
-              <div>
-                <h3 className="sr-only">Description</h3>
-
-                <div className="space-y-6">
-                  <p className="text-base text-gray-900">
-                    {customersProduct.product?.description}
+                  <Stars value={rating} size={20} className="mt-2" />
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Based on {ratingCount} {ratingCount === 1 ? "rating" : "ratings"}
                   </p>
-                </div>
-              </div>
-
-              <div className="mt-10">
-                <h3 className="text-sm font-medium text-gray-900">
-                  Highlights
-                </h3>
-
-                <div className="mt-4">
-                  <ul role="list" className="list-disc space-y-2 pl-4 text-sm">
-                    {product.highlights.map((highlight) => (
-                      <li key={highlight} className="text-gray-400">
-                        <span className="text-gray-600">{highlight}</span>
-                      </li>
+                  <div className="mt-6 space-y-2.5">
+                    {dist.map(({ n, c }) => (
+                      <div key={n} className="flex items-center gap-3 text-xs text-neutral-600">
+                        <span className="w-3 text-right">{n}</span>
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-200">
+                          <div
+                            className="h-full rounded-full bg-amber-500 transition-all duration-700"
+                            style={{ width: `${(c / ratingCount) * 100}%` }}
+                          />
+                        </div>
+                        <span className="w-6 text-neutral-400">{c}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-neutral-500">No ratings yet.</p>
+              )}
+            </div>
+            <div>
+              {reviews.length > 0 ? (
+                reviews.map((item, i) => <ProductReviewCard key={item.id ?? i} item={item} />)
+              ) : (
+                <div className="rounded-3xl border border-dashed border-neutral-300 bg-white p-10 text-center">
+                  <p className="font-semibold text-ink">No reviews yet</p>
+                  <p className="mt-1 text-sm text-neutral-500">Be the first to share your thoughts on this product.</p>
                 </div>
-              </div>
-
-              <div className="mt-10">
-                <h2 className="text-sm font-medium text-gray-900">Details</h2>
-
-                <div className="mt-4 space-y-6">
-                  <p className="text-sm text-gray-600">{product.details}</p>
-                </div>
-              </div>
+              )}
             </div>
           </div>
-        </section>
+        </Reveal>
 
-        {/* rating and review section */}
-        <section className="">
-          <h1 className="font-semibold text-lg pb-4">
-            Recent Review & Ratings
-          </h1>
+        <SimilarProducts category={product.category?.name} currentId={product.id} />
+      </div>
 
-          <div className="border p-5">
-            <Grid container spacing={7}>
-              <Grid item xs={7}>
-                <div className="space-y-5">
-                  {customersProduct.product?.reviews.map((item, i) => (
-                    <div key={i}>
-                      <ProductReviewCard item={item} />
-                    </div>
-                  ))}
-                </div>
-              </Grid>
-
-              <Grid item xs={5}>
-                <h1 className="text-xl font-semibold pb-1">Product Ratings</h1>
-                <div className="flex items-center space-x-3 pb-10">
-                  <Rating
-                    name="read-only"
-                    value={4.6}
-                    precision={0.5}
-                    readOnly
-                  />
-
-                  <p className="opacity-60">42807 Ratings</p>
-                </div>
-                <Box>
-                  <Grid
-                    container
-                    justifyContent="center"
-                    alignItems="center"
-                    gap={2}
-                  >
-                    <Grid xs={2}>
-                      <p className="p-0">Excellent</p>
-                    </Grid>
-                    <Grid xs={7}>
-                      <LinearProgress
-                        className=""
-                        sx={{ bgcolor: "#d0d0d0", borderRadius: 4, height: 7 }}
-                        variant="determinate"
-                        value={40}
-                        color="success"
-                      />
-                    </Grid>
-                    <Grid xs={2}>
-                      <p className="opacity-50 p-2">19259</p>
-                    </Grid>
-                  </Grid>
-                </Box>
-                <Box>
-                  <Grid
-                    container
-                    justifyContent="center"
-                    alignItems="center"
-                    gap={2}
-                  >
-                    <Grid xs={2}>
-                      <p className="p-0">Very Good</p>
-                    </Grid>
-                    <Grid xs={7}>
-                      <LinearProgress
-                        className=""
-                        sx={{ bgcolor: "#d0d0d0", borderRadius: 4, height: 7 }}
-                        variant="determinate"
-                        value={30}
-                        color="success"
-                      />
-                    </Grid>
-                    <Grid xs={2}>
-                      <p className="opacity-50 p-2">19259</p>
-                    </Grid>
-                  </Grid>
-                </Box>
-                <Box>
-                  <Grid
-                    container
-                    justifyContent="center"
-                    alignItems="center"
-                    gap={2}
-                  >
-                    <Grid xs={2}>
-                      <p className="p-0">Good</p>
-                    </Grid>
-                    <Grid xs={7}>
-                      <LinearProgress
-                        className="bg-[#885c0a]"
-                        sx={{ bgcolor: "#d0d0d0", borderRadius: 4, height: 7 }}
-                        variant="determinate"
-                        value={25}
-                        color="orange"
-                      />
-                    </Grid>
-                    <Grid xs={2}>
-                      <p className="opacity-50 p-2">19259</p>
-                    </Grid>
-                  </Grid>
-                </Box>
-                <Box>
-                  <Grid
-                    container
-                    justifyContent="center"
-                    alignItems="center"
-                    gap={2}
-                  >
-                    <Grid xs={2}>
-                      <p className="p-0">Average</p>
-                    </Grid>
-                    <Grid xs={7}>
-                      <LinearProgress
-                        className=""
-                        sx={{
-                          bgcolor: "#d0d0d0",
-                          borderRadius: 4,
-                          height: 7,
-                          "& .MuiLinearProgress-bar": {
-                            bgcolor: "#885c0a", // stroke color
-                          },
-                        }}
-                        variant="determinate"
-                        value={21}
-                        color="success"
-                      />
-                    </Grid>
-                    <Grid xs={2}>
-                      <p className="opacity-50 p-2">19259</p>
-                    </Grid>
-                  </Grid>
-                </Box>
-                <Box>
-                  <Grid
-                    container
-                    justifyContent="center"
-                    alignItems="center"
-                    gap={2}
-                  >
-                    <Grid xs={2}>
-                      <p className="p-0">Poor</p>
-                    </Grid>
-                    <Grid xs={7}>
-                      <LinearProgress
-                        className=""
-                        sx={{ bgcolor: "#d0d0d0", borderRadius: 4, height: 7 }}
-                        variant="determinate"
-                        value={10}
-                        color="error"
-                      />
-                    </Grid>
-                    <Grid xs={2}>
-                      <p className="opacity-50 p-2">19259</p>
-                    </Grid>
-                  </Grid>
-                </Box>
-              </Grid>
-            </Grid>
+      {/* mobile sticky bar */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-neutral-200 bg-paper/95 p-3 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-xl items-center gap-4">
+          <div className="shrink-0">
+            <p className="text-lg font-semibold leading-none text-ink">{inr(product.discountedPrice)}</p>
+            {product.price > product.discountedPrice && (
+              <p className="mt-1 text-xs text-neutral-400 line-through">{inr(product.price)}</p>
+            )}
           </div>
-        </section>
-
-        {/* similer product */}
-        <section className=" pt-10 ">
-          <h1 className="py-5 px-2 text-xl font-bold">Similer Products</h1>
-          <div className="flex flex-wrap space-y-5  justify-center items-center">
-            {gounsPage1.map((item) => (
-              <HomeProductCard product={item} />
-            ))}
-          </div>
-        </section>
+          {addButton("flex-1")}
+        </div>
       </div>
     </div>
   );

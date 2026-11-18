@@ -4,10 +4,6 @@ import {
   Grid,
   TextField,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
 } from "@mui/material";
 
 import { Fragment } from "react";
@@ -20,12 +16,6 @@ import {
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 
-const initialSizes = [
-  { name: "S", quantity: 0 },
-  { name: "M", quantity: 0 },
-  { name: "L", quantity: 0 },
-];
-
 const UpdateProductForm = () => {
   const [productData, setProductData] = useState({
     imageUrl: "",
@@ -35,15 +25,11 @@ const UpdateProductForm = () => {
     discountedPrice: "",
     price: "",
     discountPersent: "",
-    size: initialSizes,
     quantity: "",
-    topLavelCategory: "",
-    secondLavelCategory: "",
-    thirdLavelCategory: "",
     description: "",
   });
+  const [result, setResult] = useState(null); // { ok: boolean, message: string }
   const dispatch = useDispatch();
-  const jwt = localStorage.getItem("jwt");
   const { productId } = useParams();
   const { customersProduct } = useSelector((store) => store);
 
@@ -55,22 +41,26 @@ const UpdateProductForm = () => {
     }));
   };
 
-  const handleSizeChange = (e, index) => {
-    let { name, value } = e.target;
-    name === "size_quantity" ? (name = "quantity") : (name = e.target.name);
 
-    const sizes = [...productData.size];
-    sizes[index][name] = value;
-    setProductData((prevState) => ({
-      ...prevState,
-      size: sizes,
-    }));
-  };
+  const toNumber = (value) => (value === "" || value === null || value === undefined ? null : Number(value));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    dispatch(updateProduct());
-    console.log(productData);
+    setResult(null);
+    // only the fields the API can update; empty numbers are left unchanged
+    const data = {
+      title: productData.title,
+      description: productData.description,
+      brand: productData.brand,
+      color: productData.color,
+      imageUrl: productData.imageUrl,
+      price: toNumber(productData.price),
+      discountedPrice: toNumber(productData.discountedPrice),
+      discountPersent: toNumber(productData.discountPersent),
+      quantity: toNumber(productData.quantity),
+    };
+    const error = await dispatch(updateProduct({ productId, data }));
+    setResult(error ? { ok: false, message: error } : { ok: true, message: "Product updated." });
   };
 
   useEffect(() => {
@@ -80,8 +70,7 @@ const UpdateProductForm = () => {
   useEffect(()=>{
     if(customersProduct.product){
         for(let key in productData){
-    setProductData((prev)=>({...prev,[key]:customersProduct.product[key]}))
-    console.log(customersProduct.product[key],"--------",key)
+    setProductData((prev)=>({...prev,[key]:customersProduct.product[key] ?? ""}))
 }
     }
 
@@ -94,7 +83,7 @@ const UpdateProductForm = () => {
         sx={{ textAlign: "center" }}
         className="py-10 text-center "
       >
-        Add New Product
+        Update Product
       </Typography>
       <form
         onSubmit={handleSubmit}
@@ -179,54 +168,6 @@ const UpdateProductForm = () => {
               type="number"
             />
           </Grid>
-          <Grid item xs={6} sm={4}>
-            <FormControl fullWidth>
-              <InputLabel>Top Level Category</InputLabel>
-              <Select
-                name="topLavelCategory"
-                value={productData.topLavelCategory}
-                onChange={handleChange}
-                label="Top Level Category"
-              >
-                <MenuItem value="Men">Men</MenuItem>
-                <MenuItem value="Women">Women</MenuItem>
-                <MenuItem value="Kids">Kids</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={6} sm={4}>
-            <FormControl fullWidth>
-              <InputLabel>Second Level Category</InputLabel>
-              <Select
-                name="secondLavelCategory"
-                value={productData.secondLavelCategory}
-                onChange={handleChange}
-                label="Second Level Category"
-              >
-                <MenuItem value="Clothing">Clothing</MenuItem>
-                <MenuItem value="Accessories">Accessories</MenuItem>
-                <MenuItem value="Brands">Brands</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={6} sm={4}>
-            <FormControl fullWidth>
-              <InputLabel>Third Level Category</InputLabel>
-              <Select
-                name="thirdLavelCategory"
-                value={productData.thirdLavelCategory}
-                onChange={handleChange}
-                label="Third Level Category"
-              >
-                <MenuItem value="Tops">Tops</MenuItem>
-                <MenuItem value="Dresses">Dresses</MenuItem>
-                <MenuItem value="T-Shirts">T-Shirts</MenuItem>
-                <MenuItem value="Saree">Saree</MenuItem>
-                <MenuItem value="Saree">Saree</MenuItem>
-                <MenuItem value="Lengha Choli">Lengha Choli</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
           <Grid item xs={12}>
             <TextField
               fullWidth
@@ -273,6 +214,11 @@ const UpdateProductForm = () => {
             >
               Update Product
             </Button>
+            {result && (
+              <Typography role="status" sx={{ mt: 2, color: result.ok ? "success.main" : "error.main" }}>
+                {result.message}
+              </Typography>
+            )}
             {/* <Button
               variant="contained"
               sx={{ p: 1.8 }}

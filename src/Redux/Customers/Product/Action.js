@@ -108,23 +108,22 @@ export const updateProduct = (product) => async (dispatch) => {
   try {
     dispatch({ type: UPDATE_PRODUCT_REQUEST });
 
-    const { data } = await api.put(
-      `${API_BASE_URL}/api/admin/products/${product.productId}`,
-      product
-    );
+    const { data } = await api.put(`/api/admin/products/${product.productId}/update`, product.data);
 
     dispatch({
       type: UPDATE_PRODUCT_SUCCESS,
       payload: data,
     });
+    return null;
   } catch (error) {
+    // API errors look like { error, fieldErrors? }: return the most specific message for the form
+    const body = error?.response?.data;
+    const message = (body?.fieldErrors && Object.values(body.fieldErrors)[0]) || body?.error || error.message;
     dispatch({
       type: UPDATE_PRODUCT_FAILURE,
-      payload:
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : error.message,
+      payload: message,
     });
+    return message;
   }
 };
 

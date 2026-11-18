@@ -56,15 +56,18 @@ export default function RegisterUserForm() {
             name="password"
             type="password"
             required
-            minLength={6}
+            minLength={8}
+            maxLength={72}
+            pattern="(?=.*[A-Za-z])(?=.*\d).{8,72}"
+            title="8 to 72 characters, with at least one letter and one number"
             autoComplete="new-password"
-            placeholder="At least 6 characters"
+            placeholder="8+ characters, a letter and a number"
             className="field"
           />
         </div>
 
         {submitted && auth.error && (
-          <AuthMessage>We couldn’t create your account. That email may already be registered — try signing in.</AuthMessage>
+          <AuthMessage>{auth.error || "We couldn’t create your account. Please try again."}</AuthMessage>
         )}
 
         <button type="submit" disabled={auth.isLoading} className="btn-primary w-full">

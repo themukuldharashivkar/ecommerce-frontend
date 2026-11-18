@@ -13,6 +13,13 @@ import {
 } from './ActionTypes';
 import api, { API_BASE_URL } from '../../config/api';
 
+// The API answers errors as { error, details, timestamp, fieldErrors? }: show the most specific message.
+const apiErrorMessage = (error, fallback) => {
+  const body = error?.response?.data;
+  const firstFieldError = body?.fieldErrors && Object.values(body.fieldErrors)[0];
+  return firstFieldError || body?.error || fallback;
+};
+
 // Register action creators
 const registerRequest = () => ({ type: REGISTER_REQUEST });
 const registerSuccess = (user) => ({ type: REGISTER_SUCCESS, payload:user });
@@ -27,7 +34,7 @@ export const register = userData => async dispatch => {
     localStorage.setItem("jwt",user.jwt)
     dispatch(registerSuccess(user));
   } catch (error) {
-    dispatch(registerFailure(error.message));
+    dispatch(registerFailure(apiErrorMessage(error, "We couldn’t create your account. Please try again.")));
   }
 };
 

@@ -38,14 +38,14 @@ dispatch({
     });
     return true;
   } catch (error) {
+    // API errors look like { error, fieldErrors? }; return the message so the page can show it
+    const body = error?.response?.data;
+    const message = (body?.fieldErrors && Object.values(body.fieldErrors)[0]) || body?.error || error.message;
     dispatch({
       type: ADD_ITEM_TO_CART_FAILURE,
-      payload:
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : error.message,
+      payload: message,
     });
-    return false;
+    return message;
   }
 };
 

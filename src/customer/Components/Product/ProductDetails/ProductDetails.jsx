@@ -73,7 +73,8 @@ function DetailsSkeleton() {
 export default function ProductDetails() {
   const [selectedSize, setSelectedSize] = useState(null);
   const [sizeError, setSizeError] = useState(false);
-  const [status, setStatus] = useState("idle"); // idle | adding | added | error
+  const [status, setStatus] = useState("idle");
+  const [addError, setAddError] = useState(null); // idle | adding | added | error
   const [zoom, setZoom] = useState({ on: false, x: 50, y: 50 });
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -122,12 +123,14 @@ export default function ProductDetails() {
       return;
     }
     setStatus("adding");
-    const ok = await dispatch(addItemToCart({ data: { productId, size: selectedSize }, jwt }));
-    if (ok) {
+    const result = await dispatch(addItemToCart({ data: { productId, size: selectedSize }, jwt }));
+    if (result === true) {
       await dispatch(getCart(jwt));
       setStatus("added");
       timer.current = setTimeout(() => setStatus("idle"), 4000);
     } else {
+      // e.g. "Only 2 left of ... in size M" from the API
+      setAddError(typeof result === "string" ? result : null);
       setStatus("error");
     }
   };
@@ -308,7 +311,7 @@ export default function ProductDetails() {
             )}
             {status === "error" && (
               <p role="alert" className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
-                We couldn’t add this item. Please try again.
+                {addError || "We couldn’t add this item. Please try again."}
               </p>
             )}
 

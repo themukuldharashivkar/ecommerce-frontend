@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { createOrder } from "../../../Redux/Customers/Order/Action";
 import AddressCard from "../adreess/AdreessCard";
@@ -17,8 +17,11 @@ export default function AddDeliveryAddressForm({ handleNext }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const jwt = localStorage.getItem("jwt");
-  const { auth } = useSelector((store) => store);
+  const { auth, order } = useSelector((store) => store);
   const [selectedAddress, setSelectedAddress] = React.useState(null);
+  // only show errors from an order placed on this visit, not from an earlier one
+  const [submitted, setSubmitted] = React.useState(false);
+  const orderError = submitted && !order.loading ? order.error : null;
   const addresses = auth.user?.addresses || [];
 
   const handleSubmit = (event) => {
@@ -33,16 +36,28 @@ export default function AddDeliveryAddressForm({ handleNext }) {
       zipCode: data.get("zip"),
       mobile: data.get("phoneNumber"),
     };
+    setSubmitted(true);
     dispatch(createOrder({ address, jwt, navigate }));
     handleNext();
   };
 
   const handleCreateOrder = (item) => {
+    setSubmitted(true);
     dispatch(createOrder({ address: item, jwt, navigate }));
     handleNext();
   };
 
   return (
+    <>
+    {orderError && (
+      <p role="alert" className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {orderError}.{" "}
+        <Link to="/cart" className="font-semibold underline">
+          Update your bag
+        </Link>{" "}
+        and try again.
+      </p>
+    )}
     <div className={`grid items-start gap-8 ${addresses.length ? "lg:grid-cols-[22rem_1fr] xl:gap-12" : "mx-auto max-w-2xl"}`}>
       {addresses.length > 0 && (
         <section aria-labelledby="saved-addresses">
@@ -109,5 +124,6 @@ export default function AddDeliveryAddressForm({ handleNext }) {
         </form>
       </section>
     </div>
+    </>
   );
 }

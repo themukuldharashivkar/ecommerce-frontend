@@ -11,6 +11,7 @@ import {
   GET_ORDER_HISTORY_SUCCESS,
 } from "./ActionType";
 import api, { API_BASE_URL } from "../../../config/api";
+import { getCart } from "../Cart/Action";
 
 export const createOrder = (reqData) => async (dispatch) => {
   console.log("req data ", reqData);
@@ -39,12 +40,14 @@ export const createOrder = (reqData) => async (dispatch) => {
     });
   } catch (error) {
     console.log("catch error : ", error);
+    const body = error.response?.data;
+    // 409: an item sold out or has fewer left than in the bag; reload the bag so it shows current stock
+    if (error.response?.status === 409) {
+      dispatch(getCart(reqData.jwt));
+    }
     dispatch({
       type: CREATE_ORDER_FAILURE,
-      payload:
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : error.message,
+      payload: body?.error || body?.message || error.message,
     });
   }
 };

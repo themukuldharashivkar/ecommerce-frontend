@@ -138,6 +138,8 @@ export default function ProductDetails() {
   if (!ready) return <DetailsSkeleton />;
 
   const saved = product.price - product.discountedPrice;
+  // worked out from the prices: the stored discountPersent is 0 for part of the seeded catalog
+  const savedPercent = product.price > 0 ? Math.round((saved / product.price) * 100) : 0;
   const reviews = product.reviews || [];
 
   const addButton = (className = "") => (
@@ -239,7 +241,7 @@ export default function ProductDetails() {
                 <>
                   <span className="text-lg text-neutral-400 line-through">{inr(product.price)}</span>
                   <span className="text-sm font-semibold text-success">
-                    You save {inr(saved)} ({product.discountPersent}%)
+                    You save {inr(saved)} ({savedPercent}%)
                   </span>
                 </>
               )}

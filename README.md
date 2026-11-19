@@ -35,7 +35,7 @@ With Docker, the API repository's Compose file can start the storefront together
 | `npm run build` | production build in `build/` |
 | `npm run lint` | ESLint over `src/` |
 
-CI (GitHub Actions) runs `npm ci`, `npm run lint` and `npm run build` on every push and pull request.
+CI (GitHub Actions) runs on every push and pull request. It scans the whole git history for secrets (gitleaks), runs `npm ci`, `npm run lint` and `npm run build`, and builds the Docker image.
 
 ## Project layout
 
